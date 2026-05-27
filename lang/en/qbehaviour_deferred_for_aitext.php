@@ -24,4 +24,5 @@
  */
 
 $string['pluginname'] = 'Deferred feedback for AI grading';
+$string['privacy:metadata'] = 'The Deferred feedback for AI grading behaviour plugin does not store any personal data. AI-generated grading data is stored as question attempt step data, which is managed by the core question engine privacy provider.';
 
