@@ -34,9 +34,8 @@ class qbehaviour_deferred_for_aitext_renderer extends qbehaviour_renderer {
             $output .= get_string('commentx', 'question',
                 $qa->get_behaviour(false)->format_comment(null, null, $options->context));
         } else {
-            // Fall back to AI-generated comment.
-            $laststep = $qa->get_last_step();
-            $aicomment = $laststep->get_behaviour_var('_comment');
+            // Fall back to AI-generated comment (search all steps, not just the last).
+            $aicomment = $qa->get_last_behaviour_var('_comment');
             if ($aicomment !== null) {
                 $output .= get_string('commentx', 'question',
                     format_text($aicomment, FORMAT_HTML, ['context' => $options->context]));

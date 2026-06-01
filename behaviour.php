@@ -89,7 +89,7 @@ class qbehaviour_deferred_for_aitext extends qbehaviour_deferredfeedback {
      * @param question_attempt_pending_step $pendingstep the step being processed.
      * @return bool question_attempt::KEEP or question_attempt::DISCARD.
      */
-    public function process_finish(question_attempt_pending_step $pendingstep): bool {
+    public function process_finish(question_attempt_pending_step $pendingstep) {
         // Let the parent call grade_response() and set fraction + state on the step.
         $result = parent::process_finish($pendingstep);
 
@@ -128,6 +128,29 @@ class qbehaviour_deferred_for_aitext extends qbehaviour_deferredfeedback {
             $pendingstep->set_behaviour_var('_spellcheckresponse', $question->lastspellcheckresponse);
         }
     }
+    public function process_action(question_attempt_pending_step $pendingstep) {
+        if ($pendingstep->has_behaviour_var('spellcheckedit')) {
+            return $this->process_spellcheck_edit($pendingstep);
+        }
+        return parent::process_action($pendingstep);
+    }
+
+    /**
+     * The step has a 'spellcheckedit' behaviour variable, meaning the teacher has submitted an edited version of the student's response
+     * after using the ai spellcheck feature. We want to keep the step and update its state and fraction to match the current state of the attempt,
+     * since they do not change but we want to persist the edited response for display in the renderer.
+     * @param question_attempt_pending_step $pendingstep
+     * @return bool
+     */
+    protected function process_spellcheck_edit(question_attempt_pending_step $pendingstep): bool {
+        if (!$this->qa->get_state()->is_finished()) {
+            return question_attempt::DISCARD;
+        }
+        // Keep the current state — this doesn't change the grade.
+        $pendingstep->set_state($this->qa->get_state());
+        $pendingstep->set_fraction($this->qa->get_fraction());
+        return question_attempt::KEEP;
+    }
 
     /**
      * Summarise what happened in a given step.
@@ -135,14 +158,12 @@ class qbehaviour_deferred_for_aitext extends qbehaviour_deferredfeedback {
      * @param question_attempt_step $step the step to summarise.
      * @return string a plain-text summary.
      */
-    public function summarise_action(question_attempt_step $step): string {
-        if ($step->has_behaviour_var('comment')) {
-            return $this->summarise_manual_comment($step);
-        } else if ($step->has_behaviour_var('finish')) {
-            return $this->summarise_finish($step);
-        } else {
-            return $this->summarise_save($step);
+    public function summarise_action(question_attempt_step $step) {
+        if ($step->has_behaviour_var('spellcheckedit')) {
+            return get_string('spellcheckeditaction', 'qbehaviour_deferred_for_aitext');
         }
+        return parent::summarise_action($step);
     }
+
 }
 
