@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Question behaviour for AI-graded text questions with deferred feedback.
+ * Question behaviour for qtype_aitext questions with deferred feedback.
  *
  * This behaviour extends the standard deferredfeedback behaviour to properly
  * persist AI-generated grading data into the grading step via the question engine
@@ -51,11 +51,30 @@ defined('MOODLE_INTERNAL') || die();
 require_once($CFG->dirroot . '/question/behaviour/deferredfeedback/behaviour.php');
 
 /**
- * Question behaviour for AI-graded text questions (deferred feedback variant).
+ * Question behaviour for qtype_aitext questions with deferred feedback.
  *
- * Extends qbehaviour_deferredfeedback to intercept the grading step and write
- * AI-computed metadata (feedback, prompt, spellcheck) as cached behaviour
- * variables on the pending step, eliminating the need for raw DB writes.
+ * This behaviour extends the standard deferredfeedback behaviour to properly
+ * persist AI-generated grading data into the grading step via the question engine
+ * API, avoiding raw database writes from within the question type.
+ *
+ * After grade_response() runs and returns a [fraction, state] pair, this behaviour
+ * reads the AI results cached on the question object and writes them as cached
+ * behaviour variables (_-prefixed) into the pending step before it is committed.
+ * Variable naming convention used:
+ * - Cached behaviour vars (_-prefix, written by apply_ai_results_to_step):
+ *   _comment          The AI-generated feedback text (HTML).
+ *   _commentformat    The format of the feedback (FORMAT_HTML).
+ *   _aiprompt         The full rendered prompt sent to the AI.
+ *   _spellcheckresponse  The AI spellcheck/grammar correction (if enabled).
+ *
+ * - Manual grading vars (written later by process_comment() via manual_grade()):
+ *   comment           Teacher's manual comment (overrides AI comment for display).
+ *   commentformat     Format of teacher's comment.
+ *   mark              Teacher's mark (absolute).
+ *   maxmark           Maximum mark at time of manual grading.
+ *
+ * The renderer should prefer teacher vars (comment) over AI vars (_comment) when
+ * both are present on a step.
  *
  * @package    qbehaviour_deferred_for_aitext
  * @copyright  2026 ISB Bayern
@@ -128,6 +147,20 @@ class qbehaviour_deferred_for_aitext extends qbehaviour_deferredfeedback {
             $pendingstep->set_behaviour_var('_spellcheckresponse', $question->lastspellcheckresponse);
         }
     }
+
+    /**
+     * Dispatch the processing of a pending step to the appropriate handler.
+     *
+     * If the pending step contains a 'spellcheckedit' behaviour variable, this
+     * means a teacher has submitted an edited spellcheck correction via the
+     * dynamic form. In that case, processing is delegated to
+     * process_spellcheck_edit(). Otherwise, the parent deferredfeedback
+     * process_action() handles the step normally (save, finish, comment).
+     *
+     * @param question_attempt_pending_step $pendingstep a partially initialised step
+     *      containing all the information about the action being performed.
+     * @return bool question_attempt::KEEP or question_attempt::DISCARD.
+     */
     public function process_action(question_attempt_pending_step $pendingstep) {
         if ($pendingstep->has_behaviour_var('spellcheckedit')) {
             return $this->process_spellcheck_edit($pendingstep);

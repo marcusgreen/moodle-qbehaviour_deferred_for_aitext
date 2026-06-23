@@ -16,16 +16,28 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once($CFG->dirroot . '/question/behaviour/deferredfeedback/renderer.php');
+
 /**
- * Renderer for the deferred question behaviour for qtype_aitext.
+ * Renderer for the deferred feedback question behaviour adapted for qtype_aitext.
  *
- * @subpackage deferred_for_aitext
+ * @package    qbehaviour_deferred_for_aitext
  * @copyright  2026 ISB, Bayern
  * @author     Paola Maneggia
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class qbehaviour_deferred_for_aitext_renderer extends qbehaviour_renderer {
+class qbehaviour_deferred_for_aitext_renderer extends qbehaviour_deferredfeedback_renderer {
 
+    /**
+     * Override manual_comment_view to display as manual comment the ai generated feedback, as long
+     * as there is no manual grading. Based on manual_comment_view in qbehaviour_renderer.
+     * @param question_attempt $qa
+     * @param question_display_options $options
+     * @return string
+     * @throws \core\exception\coding_exception
+     * @throws \core\exception\moodle_exception
+     * @throws coding_exception
+     */
     public function manual_comment_view(question_attempt $qa, question_display_options $options) {
         $output = '';
 
