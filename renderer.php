@@ -29,6 +29,138 @@ require_once($CFG->dirroot . '/question/behaviour/deferredfeedback/renderer.php'
 class qbehaviour_deferred_for_aitext_renderer extends qbehaviour_deferredfeedback_renderer {
 
     /**
+     * Override manual_comment_fields to pre-fill the editor with AI-generated
+     * feedback when no manual comment exists yet.
+     *
+     * This is a copy of qbehaviour_renderer::manual_comment_fields() with a
+     * single change: when there is no existing manual comment, the AI-generated
+     * feedback from the cached behaviour variable '_comment' is used as the
+     * initial editor content instead of an empty string.
+     *
+     * @param question_attempt $qa a question attempt.
+     * @param question_display_options $options controls what should and should not be displayed.
+     * @return string HTML fragment.
+     */
+    public function manual_comment_fields(question_attempt $qa, question_display_options $options) {
+        global $CFG;
+
+        require_once($CFG->dirroot . '/lib/filelib.php');
+        require_once($CFG->dirroot . '/repository/lib.php');
+
+        $inputname = $qa->get_behaviour_field_name('comment');
+        $id = $inputname . '_id';
+        list($commenttext, $commentformat, $commentstep) = $qa->get_current_manual_comment();
+
+        $editor = editors_get_preferred_editor($commentformat);
+        $strformats = format_text_menu();
+        $formats = $editor->get_supported_formats();
+        foreach ($formats as $fid) {
+            $formats[$fid] = $strformats[$fid];
+        }
+
+        $draftitemareainputname = $qa->get_behaviour_field_name('comment:itemid');
+        $draftitemid = optional_param($draftitemareainputname, false, PARAM_INT);
+
+        if (!$draftitemid && $commentstep === null) {
+            $aicomment = $qa->get_last_behaviour_var('_comment');
+            $commenttext = ($aicomment !== null) ? $aicomment : '';
+            $commentformat = FORMAT_HTML;
+            $draftitemid = file_get_unused_draft_itemid();
+        } else if (!$draftitemid) {
+            list($draftitemid, $commenttext) = $commentstep->prepare_response_files_draft_itemid_with_text(
+                'bf_comment', $options->context->id, $commenttext);
+        }
+
+        $editor->set_text($commenttext);
+        $editor->use_editor($id, question_utils::get_editor_options($options->context),
+            question_utils::get_filepicker_options($options->context, $draftitemid));
+
+        $commenteditor = html_writer::tag('div', html_writer::tag('textarea', s($commenttext),
+            array('id' => $id, 'name' => $inputname, 'rows' => 3, 'cols' => 60)));
+
+        $attributes = ['type'  => 'hidden', 'name'  => $draftitemareainputname, 'value' => $draftitemid];
+        $commenteditor .= html_writer::empty_tag('input', $attributes);
+
+        $editorformat = '';
+        if (count($formats) == 1) {
+            reset($formats);
+            $editorformat .= html_writer::empty_tag('input', array('type' => 'hidden',
+                'name' => $inputname . 'format', 'value' => key($formats)));
+        } else {
+            $editorformat = html_writer::start_tag('div', array('class' => 'fitem'));
+            $editorformat .= html_writer::start_tag('div', array('class' => 'fitemtitle'));
+            $editorformat .= html_writer::tag('label', get_string('format'), array('for'=>'menu'.$inputname.'format'));
+            $editorformat .= html_writer::end_tag('div');
+            $editorformat .= html_writer::start_tag('div', array('class' => 'felement fhtmleditor'));
+            $editorformat .= html_writer::select($formats, $inputname.'format', $commentformat, '');
+            $editorformat .= html_writer::end_tag('div');
+            $editorformat .= html_writer::end_tag('div');
+        }
+
+        $comment = html_writer::tag('div', html_writer::tag('div',
+                html_writer::tag('label', get_string('comment', 'question'),
+                    array('for' => $id)), array('class' => 'fitemtitle')) .
+            html_writer::tag('div', $commenteditor, array('class' => 'felement fhtmleditor', 'data-fieldtype' => "editor")),
+            array('class' => 'fitem'));
+        $comment .= $editorformat;
+
+        $mark = '';
+        if ($qa->get_max_mark()) {
+            $currentmark = $qa->get_current_manual_mark();
+            $maxmark = $qa->get_max_mark();
+
+            $fieldsize = strlen($qa->format_max_mark($options->markdp)) - 1;
+            $markfield = $qa->get_behaviour_field_name('mark');
+
+            $attributes = array(
+                'type' => 'text',
+                'size' => $fieldsize,
+                'name' => $markfield,
+                'id'=> $markfield
+            );
+            if (!is_null($currentmark)) {
+                $attributes['value'] = $currentmark;
+            }
+
+            $markrange = html_writer::empty_tag('input', array(
+                    'type' => 'hidden',
+                    'name' => $qa->get_behaviour_field_name('maxmark'),
+                    'value' => $maxmark,
+                )) . html_writer::empty_tag('input', array(
+                    'type' => 'hidden',
+                    'name' => $qa->get_control_field_name('minfraction'),
+                    'value' => $qa->get_min_fraction(),
+                )) . html_writer::empty_tag('input', array(
+                    'type' => 'hidden',
+                    'name' => $qa->get_control_field_name('maxfraction'),
+                    'value' => $qa->get_max_fraction(),
+                ));
+
+            $error = $qa->validate_manual_mark($currentmark);
+            $errorclass = '';
+            if ($error !== '') {
+                $errorclass = ' error alert-danger';
+                $error = html_writer::tag('span', $error,
+                        array('class' => 'error')) . html_writer::empty_tag('br');
+            }
+
+            $a = new stdClass();
+            $a->max = $qa->format_max_mark($options->markdp);
+            $a->mark = html_writer::empty_tag('input', $attributes);
+            $mark = html_writer::tag('div', html_writer::tag('div',
+                    html_writer::tag('label', get_string('mark', 'question'),
+                        array('for' => $markfield)),
+                    array('class' => 'fitemtitle')) .
+                html_writer::tag('div', $error . get_string('xoutofmax', 'question', $a) .
+                    $markrange, array('class' => 'felement ftext' . $errorclass)
+                ), array('class' => 'fitem'));
+        }
+
+        return html_writer::tag('fieldset', html_writer::tag('div', $comment . $mark,
+            array('class' => 'fcontainer clearfix')), array('class' => 'hidden'));
+    }
+
+    /**
      * Override manual_comment_view to display as manual comment the ai generated feedback, as long
      * as there is no manual grading. Based on manual_comment_view in qbehaviour_renderer.
      * @param question_attempt $qa
@@ -41,8 +173,9 @@ class qbehaviour_deferred_for_aitext_renderer extends qbehaviour_deferredfeedbac
     public function manual_comment_view(question_attempt $qa, question_display_options $options) {
         $output = '';
 
-        if ($qa->has_manual_comment()) {
-            // Teacher comment takes priority.
+        list($commenttext, $commentformat, $commentstep) = $qa->get_manual_comment();
+        if ($commenttext !== null && trim($commenttext) !== '') {
+            // Non empty teacher comment takes priority.
             $output .= get_string('commentx', 'question',
                 $qa->get_behaviour(false)->format_comment(null, null, $options->context));
         } else {
