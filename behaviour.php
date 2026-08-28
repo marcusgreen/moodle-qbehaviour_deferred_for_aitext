@@ -84,16 +84,6 @@ require_once($CFG->dirroot . '/question/behaviour/deferredfeedback/behaviour.php
 class qbehaviour_deferred_for_aitext extends qbehaviour_deferredfeedback {
 
     /**
-     * Only compatible with qtype_aitext_question instances.
-     *
-     * @param question_definition $question the question.
-     * @return bool true if this behaviour can be used with this question type.
-     */
-    public function is_compatible_question(question_definition $question): bool {
-        return $question instanceof qtype_aitext_question;
-    }
-
-    /**
      * Process the finish action.
      *
      * Calls the parent process_finish() which invokes grade_response() on the
