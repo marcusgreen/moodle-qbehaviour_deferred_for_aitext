@@ -76,7 +76,7 @@ class qbehaviour_deferred_for_aitext_renderer extends qbehaviour_deferredfeedbac
             question_utils::get_filepicker_options($options->context, $draftitemid));
 
         $commenteditor = html_writer::tag('div', html_writer::tag('textarea', s($commenttext),
-            array('id' => $id, 'name' => $inputname, 'rows' => 3, 'cols' => 60)));
+            ['id' => $id, 'name' => $inputname, 'rows' => 3, 'cols' => 60]));
 
         $attributes = ['type'  => 'hidden', 'name'  => $draftitemareainputname, 'value' => $draftitemid];
         $commenteditor .= html_writer::empty_tag('input', $attributes);
@@ -84,14 +84,14 @@ class qbehaviour_deferred_for_aitext_renderer extends qbehaviour_deferredfeedbac
         $editorformat = '';
         if (count($formats) == 1) {
             reset($formats);
-            $editorformat .= html_writer::empty_tag('input', array('type' => 'hidden',
-                'name' => $inputname . 'format', 'value' => key($formats)));
+            $editorformat .= html_writer::empty_tag('input', ['type' => 'hidden',
+                'name' => $inputname . 'format', 'value' => key($formats)]);
         } else {
-            $editorformat = html_writer::start_tag('div', array('class' => 'fitem'));
-            $editorformat .= html_writer::start_tag('div', array('class' => 'fitemtitle'));
-            $editorformat .= html_writer::tag('label', get_string('format'), array('for'=>'menu'.$inputname.'format'));
+            $editorformat = html_writer::start_tag('div', ['class' => 'fitem']);
+            $editorformat .= html_writer::start_tag('div', ['class' => 'fitemtitle']);
+            $editorformat .= html_writer::tag('label', get_string('format'), ['for' => 'menu'.$inputname.'format']);
             $editorformat .= html_writer::end_tag('div');
-            $editorformat .= html_writer::start_tag('div', array('class' => 'felement fhtmleditor'));
+            $editorformat .= html_writer::start_tag('div', ['class' => 'felement fhtmleditor']);
             $editorformat .= html_writer::select($formats, $inputname.'format', $commentformat, '');
             $editorformat .= html_writer::end_tag('div');
             $editorformat .= html_writer::end_tag('div');
@@ -99,9 +99,9 @@ class qbehaviour_deferred_for_aitext_renderer extends qbehaviour_deferredfeedbac
 
         $comment = html_writer::tag('div', html_writer::tag('div',
                 html_writer::tag('label', get_string('comment', 'question'),
-                    array('for' => $id)), array('class' => 'fitemtitle')) .
-            html_writer::tag('div', $commenteditor, array('class' => 'felement fhtmleditor', 'data-fieldtype' => "editor")),
-            array('class' => 'fitem'));
+                    ['for' => $id]), ['class' => 'fitemtitle']) .
+            html_writer::tag('div', $commenteditor, ['class' => 'felement fhtmleditor', 'data-fieldtype' => "editor"]),
+            ['class' => 'fitem']);
         $comment .= $editorformat;
 
         $mark = '';
@@ -112,36 +112,36 @@ class qbehaviour_deferred_for_aitext_renderer extends qbehaviour_deferredfeedbac
             $fieldsize = strlen($qa->format_max_mark($options->markdp)) - 1;
             $markfield = $qa->get_behaviour_field_name('mark');
 
-            $attributes = array(
+            $attributes = [
                 'type' => 'text',
                 'size' => $fieldsize,
                 'name' => $markfield,
-                'id'=> $markfield
-            );
+                'id' => $markfield,
+            ];
             if (!is_null($currentmark)) {
                 $attributes['value'] = $currentmark;
             }
 
-            $markrange = html_writer::empty_tag('input', array(
+            $markrange = html_writer::empty_tag('input', [
                     'type' => 'hidden',
                     'name' => $qa->get_behaviour_field_name('maxmark'),
                     'value' => $maxmark,
-                )) . html_writer::empty_tag('input', array(
+                ]) . html_writer::empty_tag('input', [
                     'type' => 'hidden',
                     'name' => $qa->get_control_field_name('minfraction'),
                     'value' => $qa->get_min_fraction(),
-                )) . html_writer::empty_tag('input', array(
+                ]) . html_writer::empty_tag('input', [
                     'type' => 'hidden',
                     'name' => $qa->get_control_field_name('maxfraction'),
                     'value' => $qa->get_max_fraction(),
-                ));
+                ]);
 
             $error = $qa->validate_manual_mark($currentmark);
             $errorclass = '';
             if ($error !== '') {
                 $errorclass = ' error alert-danger';
                 $error = html_writer::tag('span', $error,
-                        array('class' => 'error')) . html_writer::empty_tag('br');
+                        ['class' => 'error']) . html_writer::empty_tag('br');
             }
 
             $a = new stdClass();
@@ -149,15 +149,15 @@ class qbehaviour_deferred_for_aitext_renderer extends qbehaviour_deferredfeedbac
             $a->mark = html_writer::empty_tag('input', $attributes);
             $mark = html_writer::tag('div', html_writer::tag('div',
                     html_writer::tag('label', get_string('mark', 'question'),
-                        array('for' => $markfield)),
-                    array('class' => 'fitemtitle')) .
+                        ['for' => $markfield]),
+                    ['class' => 'fitemtitle']) .
                 html_writer::tag('div', $error . get_string('xoutofmax', 'question', $a) .
-                    $markrange, array('class' => 'felement ftext' . $errorclass)
-                ), array('class' => 'fitem'));
+                    $markrange, ['class' => 'felement ftext' . $errorclass]
+                ), ['class' => 'fitem']);
         }
 
         return html_writer::tag('fieldset', html_writer::tag('div', $comment . $mark,
-            array('class' => 'fcontainer clearfix')), array('class' => 'hidden'));
+            ['class' => 'fcontainer clearfix']), ['class' => 'hidden']);
     }
 
     /**

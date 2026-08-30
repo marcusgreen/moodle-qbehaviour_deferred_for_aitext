@@ -28,8 +28,6 @@
 
 namespace qbehaviour_deferred_for_aitext\privacy;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Privacy subsystem for qbehaviour_deferred_for_aitext implementing null_provider.
  *

@@ -113,8 +113,8 @@ class qbehaviour_deferred_for_aitext extends qbehaviour_deferredfeedback {
         $result = parent::process_finish($pendingstep);
 
         if ($result === question_attempt::KEEP) {
-            // grade_response() has run. Transfer AI-cached results from the
-            // question object to the pending step as cached behaviour variables.
+            // The grade_response() call has run. Transfer AI-cached results from
+            // the question object to the pending step as cached behaviour variables.
             $this->apply_ai_results_to_step($pendingstep);
         }
 
@@ -169,9 +169,11 @@ class qbehaviour_deferred_for_aitext extends qbehaviour_deferredfeedback {
     }
 
     /**
-     * The step has a 'spellcheckedit' behaviour variable, meaning the teacher has submitted an edited version of the student's response
-     * after using the ai spellcheck feature. We want to keep the step and update its state and fraction to match the current state of the attempt,
-     * since they do not change but we want to persist the edited response for display in the renderer.
+     * The step has a 'spellcheckedit' behaviour variable, meaning the teacher has
+     * submitted an edited version of the student's response after using the AI
+     * spellcheck feature. We want to keep the step and update its state and fraction
+     * to match the current state of the attempt, since they do not change but we want
+     * to persist the edited response for display in the renderer.
      * @param question_attempt_pending_step $pendingstep
      * @return bool
      */
