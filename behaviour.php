@@ -82,7 +82,6 @@ require_once($CFG->dirroot . '/question/behaviour/deferredfeedback/behaviour.php
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class qbehaviour_deferred_for_aitext extends qbehaviour_deferredfeedback {
-
     /**
      * Only compatible with qtype_aitext_question instances.
      *
@@ -199,6 +198,4 @@ class qbehaviour_deferred_for_aitext extends qbehaviour_deferredfeedback {
         }
         return parent::summarise_action($step);
     }
-
 }
-

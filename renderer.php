@@ -27,7 +27,6 @@ require_once($CFG->dirroot . '/question/behaviour/deferredfeedback/renderer.php'
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class qbehaviour_deferred_for_aitext_renderer extends qbehaviour_deferredfeedback_renderer {
-
     /**
      * Override manual_comment_fields to pre-fill the editor with AI-generated
      * feedback when no manual comment exists yet.
@@ -49,7 +48,7 @@ class qbehaviour_deferred_for_aitext_renderer extends qbehaviour_deferredfeedbac
 
         $inputname = $qa->get_behaviour_field_name('comment');
         $id = $inputname . '_id';
-        list($commenttext, $commentformat, $commentstep) = $qa->get_current_manual_comment();
+        [$commenttext, $commentformat, $commentstep] = $qa->get_current_manual_comment();
 
         $editor = editors_get_preferred_editor($commentformat);
         $strformats = format_text_menu();
@@ -67,16 +66,25 @@ class qbehaviour_deferred_for_aitext_renderer extends qbehaviour_deferredfeedbac
             $commentformat = FORMAT_HTML;
             $draftitemid = file_get_unused_draft_itemid();
         } else if (!$draftitemid) {
-            list($draftitemid, $commenttext) = $commentstep->prepare_response_files_draft_itemid_with_text(
-                'bf_comment', $options->context->id, $commenttext);
+            [$draftitemid, $commenttext] = $commentstep->prepare_response_files_draft_itemid_with_text(
+                'bf_comment',
+                $options->context->id,
+                $commenttext
+            );
         }
 
         $editor->set_text($commenttext);
-        $editor->use_editor($id, question_utils::get_editor_options($options->context),
-            question_utils::get_filepicker_options($options->context, $draftitemid));
+        $editor->use_editor(
+            $id,
+            question_utils::get_editor_options($options->context),
+            question_utils::get_filepicker_options($options->context, $draftitemid)
+        );
 
-        $commenteditor = html_writer::tag('div', html_writer::tag('textarea', s($commenttext),
-            ['id' => $id, 'name' => $inputname, 'rows' => 3, 'cols' => 60]));
+        $commenteditor = html_writer::tag('div', html_writer::tag(
+            'textarea',
+            s($commenttext),
+            ['id' => $id, 'name' => $inputname, 'rows' => 3, 'cols' => 60]
+        ));
 
         $attributes = ['type'  => 'hidden', 'name'  => $draftitemareainputname, 'value' => $draftitemid];
         $commenteditor .= html_writer::empty_tag('input', $attributes);
@@ -89,19 +97,28 @@ class qbehaviour_deferred_for_aitext_renderer extends qbehaviour_deferredfeedbac
         } else {
             $editorformat = html_writer::start_tag('div', ['class' => 'fitem']);
             $editorformat .= html_writer::start_tag('div', ['class' => 'fitemtitle']);
-            $editorformat .= html_writer::tag('label', get_string('format'), ['for' => 'menu'.$inputname.'format']);
+            $editorformat .= html_writer::tag('label', get_string('format'), ['for' => 'menu' . $inputname . 'format']);
             $editorformat .= html_writer::end_tag('div');
             $editorformat .= html_writer::start_tag('div', ['class' => 'felement fhtmleditor']);
-            $editorformat .= html_writer::select($formats, $inputname.'format', $commentformat, '');
+            $editorformat .= html_writer::select($formats, $inputname . 'format', $commentformat, '');
             $editorformat .= html_writer::end_tag('div');
             $editorformat .= html_writer::end_tag('div');
         }
 
-        $comment = html_writer::tag('div', html_writer::tag('div',
-                html_writer::tag('label', get_string('comment', 'question'),
-                    ['for' => $id]), ['class' => 'fitemtitle']) .
+        $comment = html_writer::tag(
+            'div',
+            html_writer::tag(
+                'div',
+                html_writer::tag(
+                    'label',
+                    get_string('comment', 'question'),
+                    ['for' => $id]
+                ),
+                ['class' => 'fitemtitle']
+            ) .
             html_writer::tag('div', $commenteditor, ['class' => 'felement fhtmleditor', 'data-fieldtype' => "editor"]),
-            ['class' => 'fitem']);
+            ['class' => 'fitem']
+        );
         $comment .= $editorformat;
 
         $mark = '';
@@ -140,24 +157,34 @@ class qbehaviour_deferred_for_aitext_renderer extends qbehaviour_deferredfeedbac
             $errorclass = '';
             if ($error !== '') {
                 $errorclass = ' error alert-danger';
-                $error = html_writer::tag('span', $error,
-                        ['class' => 'error']) . html_writer::empty_tag('br');
+                $error = html_writer::tag(
+                    'span',
+                    $error,
+                    ['class' => 'error']
+                ) . html_writer::empty_tag('br');
             }
 
             $a = new stdClass();
             $a->max = $qa->format_max_mark($options->markdp);
             $a->mark = html_writer::empty_tag('input', $attributes);
-            $mark = html_writer::tag('div', html_writer::tag('div',
-                    html_writer::tag('label', get_string('mark', 'question'),
-                        ['for' => $markfield]),
-                    ['class' => 'fitemtitle']) .
+            $mark = html_writer::tag('div', html_writer::tag(
+                'div',
+                html_writer::tag(
+                    'label',
+                    get_string('mark', 'question'),
+                    ['for' => $markfield]
+                ),
+                ['class' => 'fitemtitle']
+            ) .
                 html_writer::tag('div', $error . get_string('xoutofmax', 'question', $a) .
-                    $markrange, ['class' => 'felement ftext' . $errorclass]
-                ), ['class' => 'fitem']);
+                    $markrange, ['class' => 'felement ftext' . $errorclass]), ['class' => 'fitem']);
         }
 
-        return html_writer::tag('fieldset', html_writer::tag('div', $comment . $mark,
-            ['class' => 'fcontainer clearfix']), ['class' => 'hidden']);
+        return html_writer::tag('fieldset', html_writer::tag(
+            'div',
+            $comment . $mark,
+            ['class' => 'fcontainer clearfix']
+        ), ['class' => 'hidden']);
     }
 
     /**
@@ -173,25 +200,38 @@ class qbehaviour_deferred_for_aitext_renderer extends qbehaviour_deferredfeedbac
     public function manual_comment_view(question_attempt $qa, question_display_options $options) {
         $output = '';
 
-        list($commenttext, $commentformat, $commentstep) = $qa->get_manual_comment();
+        [$commenttext, $commentformat, $commentstep] = $qa->get_manual_comment();
         if ($commenttext !== null && trim($commenttext) !== '') {
             // Non empty teacher comment takes priority.
-            $output .= get_string('commentx', 'question',
-                $qa->get_behaviour(false)->format_comment(null, null, $options->context));
+            $output .= get_string(
+                'commentx',
+                'question',
+                $qa->get_behaviour(false)->format_comment(null, null, $options->context)
+            );
         } else {
             // Fall back to AI-generated comment (search all steps, not just the last).
             $aicomment = $qa->get_last_behaviour_var('_comment');
             if ($aicomment !== null) {
-                $output .= get_string('commentx', 'question',
-                    format_text($aicomment, FORMAT_HTML, ['context' => $options->context]));
+                $output .= get_string(
+                    'commentx',
+                    'question',
+                    format_text($aicomment, FORMAT_HTML, ['context' => $options->context])
+                );
             }
         }
 
         if ($options->manualcommentlink) {
             $url = new moodle_url($options->manualcommentlink, ['slot' => $qa->get_slot()]);
-            $link = $this->output->action_link($url, get_string('commentormark', 'question'),
-                new popup_action('click', $url, 'commentquestion',
-                    ['width' => 600, 'height' => 800]));
+            $link = $this->output->action_link(
+                $url,
+                get_string('commentormark', 'question'),
+                new popup_action(
+                    'click',
+                    $url,
+                    'commentquestion',
+                    ['width' => 600, 'height' => 800]
+                )
+            );
             $output .= html_writer::tag('div', $link, ['class' => 'commentlink']);
         }
         return $output;
