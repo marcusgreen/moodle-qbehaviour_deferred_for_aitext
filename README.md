@@ -24,6 +24,10 @@ then reads AI results cached on the question object and writes them to the step:
 Teacher manual comments (`comment`, `mark`) take priority over AI vars in the
 renderer.
 
+The question behaviour output has not changed since the addition of the dependency on this behaviour.
+
+![Behaviour diagram](docs/images/aitext_behaviour.png)
+
 ## Requirements
 
 - Moodle 4.5 or later
