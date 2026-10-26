@@ -28,6 +28,35 @@ require_once($CFG->dirroot . '/question/behaviour/deferredfeedback/renderer.php'
  */
 class qbehaviour_deferred_for_aitext_renderer extends qbehaviour_deferredfeedback_renderer {
     /**
+     * Show a notice while the response is waiting for asynchronous AI grading.
+     *
+     * @param question_attempt $qa a question attempt.
+     * @param question_display_options $options controls what should and should not be displayed.
+     * @return string HTML fragment.
+     */
+    public function feedback(question_attempt $qa, question_display_options $options) {
+        $output = parent::feedback($qa, $options);
+        if (
+            $qa->get_state() === question_state::$needsgrading
+            && $qa->get_last_step()->has_behaviour_var('_aiqueued')
+        ) {
+            $output .= html_writer::div(
+                get_string('aigradingqueued', 'qbehaviour_deferred_for_aitext'),
+                'alert alert-info qbehaviour_deferred_for_aitext-queued'
+            );
+            if ($qa->get_usage_id()) {
+                // The module ignores repeat calls for the same usage, one per question.
+                $this->page->requires->js_call_amd(
+                    'qbehaviour_deferred_for_aitext/grading_status',
+                    'init',
+                    [(int) $qa->get_usage_id()]
+                );
+            }
+        }
+        return $output;
+    }
+
+    /**
      * Override manual_comment_fields to pre-fill the editor with AI-generated
      * feedback when no manual comment exists yet.
      *

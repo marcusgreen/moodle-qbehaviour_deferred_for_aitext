@@ -24,6 +24,9 @@
  */
 
 $string['aigradeaction'] = 'Graded by AI';
+$string['aigradingfinished'] = 'AI grading has finished. Loading your feedback...';
+$string['aigradingprogress'] = 'Your answers have been submitted. {$a->graded} of {$a->total} graded by AI so far. This page will refresh when grading has finished.';
+$string['aigradingqueued'] = 'This response is queued for AI grading. The grade and feedback will appear here once grading has finished.';
 $string['async'] = 'Asynchronous AI grading';
 $string['async_desc'] = 'Grade AI text responses in a background task instead of during the request that finishes the attempt. This spreads the load on the AI backend over time instead of sending all requests when many students finish at once. Requires cron to run frequently. Responses stay in the "Requires grading" state until the task has run.';
 $string['asyncconcurrency'] = 'Maximum concurrent AI grading tasks';
