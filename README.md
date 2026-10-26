@@ -9,6 +9,9 @@ Designed exclusively for use with `qtype_aitext`. Intercepts the grading step to
 write AI results (feedback, prompt, spellcheck) as cached behaviour variables on
 the pending step — eliminating raw database writes from within the question type.
 
+See the [user guide](docs/userdocs.md) for how grading works, the immediate
+and asynchronous grading modes, their settings and benefits.
+
 ## How it works
 
 When a quiz attempt finishes, `process_finish()` calls the parent grading flow,
