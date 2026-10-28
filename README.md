@@ -9,8 +9,9 @@ Designed exclusively for use with `qtype_aitext`. Intercepts the grading step to
 write AI results (feedback, prompt, spellcheck) as cached behaviour variables on
 the pending step — eliminating raw database writes from within the question type.
 
-See the [user guide](docs/userdocs.md) for how grading works, the immediate
-and asynchronous grading modes, their settings and benefits.
+See the [user guide](docs/userdocs.md) for how grading works and its benefits.
+To grade responses in a background task instead of when the attempt is
+submitted, install `qbehaviour_queued_for_aitext`.
 
 ## How it works
 

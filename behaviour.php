@@ -37,13 +37,6 @@
  *   mark              Teacher's mark (absolute).
  *   maxmark           Maximum mark at time of manual grading.
  *
- * - Asynchronous grading vars (when qbehaviour_deferred_for_aitext/async is on):
- *   _aiqueued         Set on the finish step when grading was queued to a task.
- *   aigrade           Marks the step written by the grade_response task.
- *   aifraction, aicomment, aiprompt, aispellcheck
- *                     The AI result, stored as submitted vars so regrades replay
- *                     it without another LLM call.
- *
  * The renderer should prefer teacher vars (comment) over AI vars (_comment) when
  * both are present on a step.
  *
@@ -80,13 +73,6 @@ require_once($CFG->dirroot . '/question/behaviour/deferredfeedback/behaviour.php
  *   mark              Teacher's mark (absolute).
  *   maxmark           Maximum mark at time of manual grading.
  *
- * - Asynchronous grading vars (when qbehaviour_deferred_for_aitext/async is on):
- *   _aiqueued         Set on the finish step when grading was queued to a task.
- *   aigrade           Marks the step written by the grade_response task.
- *   aifraction, aicomment, aiprompt, aispellcheck
- *                     The AI result, stored as submitted vars so regrades replay
- *                     it without another LLM call.
- *
  * The renderer should prefer teacher vars (comment) over AI vars (_comment) when
  * both are present on a step.
  *
@@ -109,24 +95,19 @@ class qbehaviour_deferred_for_aitext extends qbehaviour_deferredfeedback {
     /**
      * Process the finish action.
      *
-     * In synchronous mode (default), calls the parent process_finish() which invokes
-     * grade_response() on the question and sets the fraction and state on the pending
-     * step. After this, the AI results that grade_response() cached on the question
-     * object are written as cached behaviour variables to the pending step via
+     * Calls the parent process_finish() which invokes grade_response() on the
+     * question and sets the fraction and state on the pending step. After this,
+     * the AI results that grade_response() cached on the question object are
+     * written as cached behaviour variables to the pending step via
      * apply_ai_results_to_step().
      *
-     * In asynchronous mode the LLM is not called here. The step is left in the
-     * needsgrading state and an adhoc task is queued which grades the response
-     * later and submits the result through process_aigrade().
+     * This ensures that AI-generated data is persisted through the question engine
+     * unit of work rather than via raw database inserts.
      *
      * @param question_attempt_pending_step $pendingstep the step being processed.
      * @return bool question_attempt::KEEP or question_attempt::DISCARD.
      */
     public function process_finish(question_attempt_pending_step $pendingstep) {
-        if (self::is_async_enabled()) {
-            return $this->process_finish_async($pendingstep);
-        }
-
         // Let the parent call grade_response() and set fraction + state on the step.
         $result = parent::process_finish($pendingstep);
 
@@ -137,82 +118,6 @@ class qbehaviour_deferred_for_aitext extends qbehaviour_deferredfeedback {
         }
 
         return $result;
-    }
-
-    /**
-     * Whether asynchronous AI grading is enabled for this site.
-     *
-     * @return bool
-     */
-    public static function is_async_enabled(): bool {
-        return (bool) get_config('qbehaviour_deferred_for_aitext', 'async');
-    }
-
-    /**
-     * Finish the attempt without grading and queue the AI grading task.
-     *
-     * Mirrors qbehaviour_deferredfeedback::process_finish() except that
-     * grade_response() is not called. When the step is replayed during a regrade
-     * (it already has an id) no new task is queued: the AI grade step that
-     * follows it is replayed as well.
-     *
-     * @param question_attempt_pending_step $pendingstep the step being processed.
-     * @return bool question_attempt::KEEP or question_attempt::DISCARD.
-     */
-    protected function process_finish_async(question_attempt_pending_step $pendingstep): bool {
-        if ($this->qa->get_state()->is_finished()) {
-            return question_attempt::DISCARD;
-        }
-
-        $response = $this->qa->get_last_step()->get_qt_data();
-        if (!$this->question->is_gradable_response($response)) {
-            $pendingstep->set_state(question_state::$gaveup);
-        } else {
-            $pendingstep->set_state(question_state::$needsgrading);
-            $pendingstep->set_behaviour_var('_aiqueued', 1);
-            if (empty($pendingstep->get_id()) && $this->qa->get_usage_id()) {
-                \qbehaviour_deferred_for_aitext\task\grade_response::queue($this->qa);
-            }
-        }
-        $pendingstep->set_new_response_summary($this->question->summarise_response($response));
-        return question_attempt::KEEP;
-    }
-
-    /**
-     * Apply an AI grade computed asynchronously by the grade_response task.
-     *
-     * The AI results arrive as submitted behaviour variables (-aifraction,
-     * -aicomment, -aiprompt, -aispellcheck) so that a regrade replays them
-     * without calling the LLM again. They are copied into the same cached
-     * variables the synchronous path writes, so the renderer needs no changes.
-     *
-     * @param question_attempt_pending_step $pendingstep the step being processed.
-     * @return bool question_attempt::KEEP or question_attempt::DISCARD.
-     */
-    protected function process_aigrade(question_attempt_pending_step $pendingstep): bool {
-        if ($this->qa->get_state() !== question_state::$needsgrading) {
-            // Already graded, e.g. a teacher got there first.
-            return question_attempt::DISCARD;
-        }
-
-        $fraction = min(max(0.0, (float) $pendingstep->get_behaviour_var('aifraction')), 1.0);
-        $pendingstep->set_fraction($fraction);
-        $pendingstep->set_state(question_state::graded_state_for_fraction($fraction));
-
-        $comment = $pendingstep->get_behaviour_var('aicomment');
-        if ($comment !== null) {
-            $pendingstep->set_behaviour_var('_comment', $comment);
-            $pendingstep->set_behaviour_var('_commentformat', (string) FORMAT_HTML);
-        }
-        $prompt = $pendingstep->get_behaviour_var('aiprompt');
-        if ($prompt !== null) {
-            $pendingstep->set_behaviour_var('_aiprompt', $prompt);
-        }
-        $spellcheck = $pendingstep->get_behaviour_var('aispellcheck');
-        if ($spellcheck !== null) {
-            $pendingstep->set_behaviour_var('_spellcheckresponse', $spellcheck);
-        }
-        return question_attempt::KEEP;
     }
 
     /**
@@ -245,10 +150,6 @@ class qbehaviour_deferred_for_aitext extends qbehaviour_deferredfeedback {
     /**
      * Dispatch the processing of a pending step to the appropriate handler.
      *
-     * If the pending step contains an 'aigrade' behaviour variable, it carries
-     * the result of the asynchronous grading task and is handled by
-     * process_aigrade().
-     *
      * If the pending step contains a 'spellcheckedit' behaviour variable, this
      * means a teacher has submitted an edited spellcheck correction via the
      * dynamic form. In that case, processing is delegated to
@@ -260,9 +161,6 @@ class qbehaviour_deferred_for_aitext extends qbehaviour_deferredfeedback {
      * @return bool question_attempt::KEEP or question_attempt::DISCARD.
      */
     public function process_action(question_attempt_pending_step $pendingstep) {
-        if ($pendingstep->has_behaviour_var('aigrade')) {
-            return $this->process_aigrade($pendingstep);
-        }
         if ($pendingstep->has_behaviour_var('spellcheckedit')) {
             return $this->process_spellcheck_edit($pendingstep);
         }
@@ -295,9 +193,6 @@ class qbehaviour_deferred_for_aitext extends qbehaviour_deferredfeedback {
      * @return string a plain-text summary.
      */
     public function summarise_action(question_attempt_step $step) {
-        if ($step->has_behaviour_var('aigrade')) {
-            return get_string('aigradeaction', 'qbehaviour_deferred_for_aitext');
-        }
         if ($step->has_behaviour_var('spellcheckedit')) {
             return get_string('spellcheckeditaction', 'qbehaviour_deferred_for_aitext');
         }
